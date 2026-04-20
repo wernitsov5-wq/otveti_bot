@@ -1,5 +1,4 @@
 import logging
-import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 from flask import Flask, request
@@ -13,6 +12,10 @@ CHAT_LIST_URL = "https://t.me/addlist/gvVenh7pkjs0ODZi"
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# ===== ИНИЦИАЛИЗАЦИЯ БОТА =====
+bot_app = Application.builder().token(BOT_TOKEN).build()
+bot_app.add_handler(CommandHandler("start", start))
+
 # ===== Flask веб-сервер =====
 web_app = Flask('')
 
@@ -22,9 +25,14 @@ def home():
 
 @web_app.route(f'/webhook/{BOT_TOKEN}', methods=['POST'])
 def webhook():
-    update = Update.de_json(request.get_json(), bot_app.bot)
-    bot_app.update_queue.put(update)
-    return 'ok', 200
+    """Принимает обновления от Telegram и передает их боту."""
+    try:
+        update = Update.de_json(request.get_json(), bot_app.bot)
+        bot_app.process_update(update)
+        return 'ok', 200
+    except Exception as e:
+        logger.error(f"Ошибка при обработке веб-хука: {e}")
+        return 'error', 500
 
 # ===== ФУНКЦИЯ СТАРТ =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -32,12 +40,12 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_name = user.first_name
     
     text = (
-        f"📚 **ОТВЕТЫ МЦКО ВПР 2026** 📚\n\n"
+        f"📚 **ОТВЕТЫ ВПР МЦКО 2026** 📚\n\n"
         f"Привет, {user_name}!\n\n"
         f"✅ **Вот ссылка на ответы:**\n"
         f"{CHAT_LIST_URL}\n\n"
         f"📌 **Что там есть:**\n"
-        f"• ВПР 4, 5, 6, 7, 8 класс\n"
+        f"• ВПР 4, 5, 6, 7, 8 и 10 класс\n"
         f"• МЦКО все классы\n"
         f"• Итоговые сочинения\n"
         f"• Олимпиадные задания\n\n"
@@ -53,20 +61,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(text, parse_mode='Markdown', reply_markup=reply_markup)
 
 # ===== ЗАПУСК =====
-def main():
-    global bot_app
-    bot_app = Application.builder().token(BOT_TOKEN).build()
-    bot_app.add_handler(CommandHandler("start", start))
-    
-    # Устанавливаем веб-хук
-    webhook_url = f"https://otveti-bot.onrender.com/webhook/{BOT_TOKEN}"
-    asyncio.run(bot_app.bot.set_webhook(webhook_url))
-    
-    print("📚 БОТ ЗАПУЩЕН")
-    print(f"✅ Веб-хук: {webhook_url}")
-    
-    # Запускаем Flask
-    web_app.run(host='0.0.0.0', port=10000)
-
 if __name__ == "__main__":
-    main()
+    print("📚 БОТ ЗАПУЩЕН И ГОТОВ К РАБОТЕ ЧЕРЕЗ ВЕБ-ХУК")
+    web_app.run(host='0.0.0.0', port=10000)
