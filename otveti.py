@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import Application, CommandHandler, ContextTypes
 from flask import Flask, request
@@ -8,9 +9,11 @@ import os
 BOT_TOKEN = "8712269421:AAFJnJa5flO_Te6Wm1NeNtqSr4iY11j-Uas"
 CHAT_LIST_URL = "https://t.me/addlist/gvVenh7pkjs0ODZi"
 
+# ===== НАСТРОЙКИ =====
 logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-# Flask веб-сервер
+# ===== Flask веб-сервер =====
 web_app = Flask('')
 
 @web_app.route('/')
@@ -23,7 +26,7 @@ def webhook():
     bot_app.update_queue.put(update)
     return 'ok', 200
 
-# Асинхронная функция start
+# ===== ФУНКЦИЯ СТАРТ =====
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     user_name = user.first_name
@@ -49,15 +52,15 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     
     await update.message.reply_text(text, parse_mode='Markdown', reply_markup=reply_markup)
 
-# Запуск
+# ===== ЗАПУСК =====
 def main():
     global bot_app
     bot_app = Application.builder().token(BOT_TOKEN).build()
     bot_app.add_handler(CommandHandler("start", start))
     
-    # Устанавливаем веб-хук (один раз при запуске)
+    # Устанавливаем веб-хук
     webhook_url = f"https://otveti-bot.onrender.com/webhook/{BOT_TOKEN}"
-    bot_app.bot.set_webhook(webhook_url)
+    asyncio.run(bot_app.bot.set_webhook(webhook_url))
     
     print("📚 БОТ ЗАПУЩЕН")
     print(f"✅ Веб-хук: {webhook_url}")
